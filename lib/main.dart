@@ -1,124 +1,171 @@
-import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:math' as math;
-import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
-
-Future<List> getCurrencies() async {
-  String apiUrl = 'pro-api.coinmarketcap.com';
-  String baseCoin = 'BRL';
-  String limit = '100';
-
-  final queryParameters = {
-    'convert': baseCoin,
-    'limit': limit,
-  };
-
-  final uri =
-  Uri.https(apiUrl, '/v1/cryptocurrency/listings/latest', queryParameters);
-  // Print the http request
-  print(uri);
-
-  // Get the key from env and call get method
-  http.Response response = await http.get(uri,
-  headers: {
-    'X-CMC_PRO_API_KEY': dotenv.env['CMC_API'].toString(),
-    'Accept': 'application/json'
-  });
-
-  Map<String, dynamic> map = jsonDecode(response.body);
-  List<dynamic> data = map['data'];
-  return data;
-}
-
-Future<Map> getCurrencyInfo(int id) async {
-  String apiUrl = 'pro-api.coinmarketcap.com';
-  String idText = id.toString();
-  final queryParameters = {
-    'id': idText
-  };
-
-  final uri =
-  Uri.https(apiUrl, '/v1/cryptocurrency/info', queryParameters);
-  // Print the http request
-  print(uri);
-
-  // Get the key from env and call get method
-  http.Response response = await http.get(uri,
-      headers: {
-        'X-CMC_PRO_API_KEY': dotenv.env['CMC_API'].toString(),
-        'Accept': 'application/json'
-      });
-
-  Map<String, dynamic> map = jsonDecode(response.body)['data'][idText];
-
-  return map;
-}
+import 'package:material_floating_search_bar/material_floating_search_bar.dart';
+import 'src/api/cmc_api.dart';
 
 void main() async{
   // Load api key from .env file in root
   await dotenv.load(fileName: ".env");
   List currencies = await getCurrencies();
   runApp(new MaterialApp(
-    home: new CryptoList(currencies),
+    title: 'Cryptocurrencies List',
+    theme: ThemeData(
+      primaryColor: Colors.black,
+    ),
+    home: new CryptoList(currencies, 'Cryptocurrencies List'),
   ));
 }
 
-class CryptoList extends StatelessWidget {
-  final List _currencies;
-  CryptoList(this._currencies);
+class CryptoList extends StatefulWidget {
+  final List cryptocurrencies;
+  final String title;
+  CryptoList(this.cryptocurrencies, this.title);
+
+  @override
+  _CryptoListState createState() => _CryptoListState();
+}
+
+class _CryptoListState extends State<CryptoList>{
+  // final controller = FloatingSearchBarController();
+  late List cryptocurrenciesQuery;
+
+  @override
+  void initState() {
+    cryptocurrenciesQuery = widget.cryptocurrencies;
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
-      body: _buildBody(),
+      appBar: AppBar(
+        title: Text(widget.title),
+        leading: Icon(Icons.panorama_photosphere_outlined),
+        brightness: Brightness.dark,
+      ),
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.blueAccent,
+      body: Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            buildFloatingSearchBar(context),
+            _buildBody(),
+          ],
+        ),
+      ),
+      floatingActionButton: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            _buildFAB(),
+          ]
+      )
     );
+  }
+
+  // @override
+  // void dispose() {
+  //   controller.dispose();
+  //   super.dispose();
+  // }
+
+  Widget _buildFAB() {
+    return new FloatingActionButton(
+      backgroundColor: Colors.indigo,
+      onPressed: () => _showNotification(),
+      tooltip: 'Set Notification',
+      child: Icon(Icons.notifications),
+    );
+  }
+
+  _showNotification() {
+    //Todo
   }
 
   Widget _buildBody() {
     return new Container(
       // Setting the left, top, right and bottom margin respectively
-      margin: const EdgeInsets.fromLTRB(8.0, 54.0, 8.0, 0.0),
+      margin: const EdgeInsets.fromLTRB(8.0, 65.0, 8.0, 0.0),
       child: new Column(
         children: <Widget>[
-          _getAppTitleWidget(),
           _getListViewWidget()
         ],
       ),
     );
   }
 
-  Widget _getAppTitleWidget() {
-    return new Text(
-      'Cryptocurrencies',
-      style: new TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 24.0),
+  Widget buildFloatingSearchBar(BuildContext context) {
+    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+
+    return FloatingSearchBar(
+      hint: 'Search...',
+      scrollPadding: const EdgeInsets.only(top: 16, bottom: 56),
+      transitionDuration: const Duration(milliseconds: 800),
+      transitionCurve: Curves.easeInOut,
+      physics: const BouncingScrollPhysics(),
+      axisAlignment: isPortrait ? 0.0 : -1.0,
+      openAxisAlignment: 0.0,
+      width: isPortrait ? 600 : 500,
+      debounceDelay: const Duration(milliseconds: 500),
+      onQueryChanged: (query) {
+        queryList(query);
+      },
+      // Specify a custom transition to be used for
+      // animating between opened and closed stated.
+      transition: CircularFloatingSearchBarTransition(),
+      actions: [
+        FloatingSearchBarAction(
+          showIfOpened: false,
+          child: CircularButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {},
+          ),
+        ),
+        FloatingSearchBarAction.searchToClear(
+          showIfClosed: false,
+        ),
+      ],
+      builder: (context, transition) {
+        return ClipRRect(
+
+        );
+      },
     );
+  }
+
+  queryList(String query) {
+    cryptocurrenciesQuery = [];
+    if (query.isEmpty) {
+      setState(() {
+        cryptocurrenciesQuery = widget.cryptocurrencies;
+      });
+    } else {
+      for (int i = 0; i < widget.cryptocurrencies.length; ++i) {
+        String cryptoName = widget.cryptocurrencies[i]['slug'];
+        if (cryptoName.contains(query)) {
+          setState(() {
+            cryptocurrenciesQuery.add(widget.cryptocurrencies[i]);
+          });
+        }
+      }
+    }
   }
 
   Widget _getListViewWidget() {
     return new Flexible(
         child: new ListView.builder(
-            itemCount: _currencies.length,
+            itemCount: cryptocurrenciesQuery.length,
             itemBuilder: (context, index) {
-              final Map currency = _currencies[index];
-              // print(currency['quote']['BRL']['price']);
-
-              // Get a Color from Primary Color list
-              final MaterialColor color = Colors.primaries[index % Colors.primaries.length];
-
-              return _getListItemWidget(currency, color);
+              final Map currency = cryptocurrenciesQuery[index];
+              return _getListItemWidget(currency);
             })
     );
   }
 
-  CachedNetworkImage _getIconWidget(int currencyId, MaterialColor color) {
+  CachedNetworkImage _getIconWidget(int currencyId) {
     return new CachedNetworkImage(
       imageUrl: "https://s2.coinmarketcap.com/static/img/coins/64x64/" + currencyId.toString() +".png",
       placeholder: (context, url) => CircularProgressIndicator(),
@@ -136,8 +183,8 @@ class CryptoList extends StatelessWidget {
   Text _getSubtitlePriceWidget(double priceUsd) {
     String price = priceUsd.toStringAsFixed(2);
     return new Text(
-        'R\$ $price',
-        style: new TextStyle(fontWeight: FontWeight.bold),
+      'R\$ $price',
+      style: new TextStyle(fontWeight: FontWeight.bold),
     );
   }
 
@@ -175,9 +222,9 @@ class CryptoList extends StatelessWidget {
     return new Text(slug);
   }
 
-  ListTile _getListTile(Map currency, MaterialColor color) {
+  ListTile _getListTile(Map currency) {
     return new ListTile(
-      leading: _getIconWidget(currency['id'], color),
+      leading: _getIconWidget(currency['id']),
       title: Row (
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -186,7 +233,7 @@ class CryptoList extends StatelessWidget {
         ],
       ),
       subtitle: Padding (
-          padding: EdgeInsets.only(top: 10.0),
+        padding: EdgeInsets.only(top: 10.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           // crossAxisAlignment: CrossAxisAlignment.end,
@@ -199,14 +246,13 @@ class CryptoList extends StatelessWidget {
     );
   }
 
-  Container _getListItemWidget(Map currency, MaterialColor color) {
+  Container _getListItemWidget(Map currency) {
     return new Container(
-      margin: const EdgeInsets.only(top: 5.0),
       child: new Card(
-        child: Padding (
-          padding: const EdgeInsets.only(top: 3.0, bottom: 3.0),
-          child: _getListTile(currency, color),
-        )
+          child: Padding (
+            padding: const EdgeInsets.only(top: 2.0, bottom: 2.0),
+            child: _getListTile(currency),
+          )
       ),
     );
   }
