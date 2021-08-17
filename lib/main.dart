@@ -82,7 +82,9 @@ class _CryptoListState extends State<CryptoList>{
   }
 
   _showNotification() {
-    //Todo
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("Alert Set"),
+    ));
   }
 
   Widget _buildBody() {
