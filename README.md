@@ -3,7 +3,7 @@
 A Simple Crypto Listing App built with Flutter that show prices and other information of the most popular cryptocurrencies.
 
 
-<img src="crypto_app_screenshot.jpeg" width="100" height="100">
+<img src="crypto_app_screenshot.jpeg" width="50%" height="50%">
 
 ## Instructions
 
